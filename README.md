@@ -17,7 +17,7 @@ on:
 
 jobs:
   call-delete-docker-images:
-    uses: anand6588/ghcr-remove-docker-images@main
+    uses: anand6588/ghcr-remove-docker-images/.github/workflows/action.yml@main
     with:
       image: 'myorg/myrepo/myimage'
       tags: 'latest,dev,staging'
