@@ -1,0 +1,155 @@
+name: Delete Docker Images from GHCR.IO
+
+on:
+  workflow_call:
+    inputs:
+      image:
+        description: 'Docker image name (e.g., owner/repo/image)'
+        required: true
+        type: string
+      tags:
+        description: 'Comma-separated list of image tags to delete (e.g., tag1,tag2,tag3)'
+        required: true
+        type: string
+      wildcard-tag:
+        description: 'Wildcard tag starts with (eg: pr-* )'
+        required: false
+        type: string
+      remove-all-untagged-images:
+        description: 'Boolean flag to remove all untagged images of the package/image (default: false)'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  delete-tags:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Install jq
+      run: sudo apt-get install -y jq
+
+    - name: Get Package Versions
+      id: package_versions
+      env:
+        IMAGE: ${{ inputs.image }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        OWNER_REPO="${{ github.repository }}"
+        OWNER=$(echo $OWNER_REPO | cut -d'/' -f1)
+        IMAGE_NAME=$(basename "$IMAGE")
+        
+        # Function to fetch all pages of versions
+        fetch_versions() {
+          local page=1
+          local versions="[]"
+          while :; do
+            response=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+              "https://api.github.com/orgs/$OWNER/packages/container/$IMAGE_NAME/versions?page=$page&per_page=100")
+            
+            if [ "$(echo "$response" | jq '. | length')" -eq 0 ]; then
+              break
+            fi
+
+            versions=$(echo "$versions $response" | jq -s 'add')
+            page=$((page + 1))
+          done
+          echo "$versions"
+        }
+
+        versions=$(fetch_versions)
+
+        if echo "$versions" | jq empty; then
+          echo "$versions" > versions.json
+        else
+          echo "Failed to fetch package versions: $versions"
+          exit 1
+        fi
+
+    - name: Delete Docker Images
+      env:
+        TAGS: ${{ inputs.tags }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        REMOVE_UNTAGGED: ${{ inputs.remove-all-untagged-images }}
+        WILDCARD_TAG: ${{ inputs.wildcard-tag }}
+      run: |
+        OWNER_REPO="${{ github.repository }}"
+        OWNER=$(echo $OWNER_REPO | cut -d'/' -f1)
+        IMAGE_NAME=$(basename "${{ inputs.image }}")
+
+        IFS=',' read -ra TAG_ARRAY <<< "$TAGS"
+        
+        # Function to delete a version by ID
+        delete_version() {
+          local version_id=$1
+          delete_url="https://api.github.com/orgs/$OWNER/packages/container/$IMAGE_NAME/versions/$version_id"
+          echo "Delete URL: $delete_url"
+
+          delete_response=$(curl -s -w "\n%{http_code}" -X DELETE -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" "$delete_url")
+
+          http_code=$(echo "$delete_response" | tail -n1)
+          response_body=$(echo "$delete_response" | sed '$d')
+
+          echo "HTTP status code: $http_code"
+          echo "Response body: $response_body"
+
+          if [ "$http_code" -eq 204 ]; then
+            echo "Version ID $version_id deleted successfully."
+          else
+            echo "Failed to delete version ID $version_id. Response: $response_body"
+            exit 1  # Exit with non-zero status code to indicate failure
+          fi
+        }
+
+        if [ -n "$TAGS" ]; then
+          # Delete specified tags
+          for tag in "${TAG_ARRAY[@]}"; do
+            echo "Attempting to delete tag: $tag"
+
+           version_id=$(jq -r --arg tag "$tag" '.[] | select(.metadata.container.tags | type == "array" and index($tag)) | .id' versions.json)
+
+            if [ -z "$version_id" ] || [ "$version_id" == "null" ]; then
+              echo "Tag $tag not found, skipping."
+            else
+              echo "Version ID for tag $tag: $version_id"
+              delete_version "$version_id"
+            fi
+          done
+        fi
+
+        if [ "$REMOVE_UNTAGGED" == "true" ]; then
+          # Delete untagged images
+          echo "Attempting to delete untagged images"
+          untagged_version_ids=$(jq -r '.[] | select(.metadata.container.tags | type == "array" and length == 0) | .id' versions.json | tr '\n' ' ')
+
+          if [ -z "$untagged_version_ids" ]; then
+            echo "No untagged versions found."
+          else
+            echo "Untagged version IDs: $untagged_version_ids"
+            for version_id in $untagged_version_ids; do
+              if [ -n "$version_id" ]; then
+                echo "Untagged version ID: $version_id"
+                delete_version "$version_id"
+              fi
+            done
+          fi
+        fi
+        
+        if [ -n "$WILDCARD_TAG" ]; then
+          # Delete Wildcard images
+          echo "Attempting to delete Wildcard images"
+          wildcard_version_ids=$(jq -r --arg wildcardtag "${WILDCARD_TAG/\*/}" '.[] | select(.metadata.container.tags | type == "array" and any(.[]; test("^$wildcardtag.*"))) | .id' versions.json | tr '\n' ' ')
+
+          if [ -z "$wildcard_version_ids" ]; then
+            echo "No wildcard versions found for $WILDCARD_TAG."
+          else
+            echo "$WILDCARD_TAG version IDs: $wildcard_version_ids"
+            for version_id in $wildcard_version_ids; do
+              if [ -n "$version_id" ]; then
+                echo "$WILDCARD_TAG version ID: $version_id"
+                delete_version "$version_id"
+              fi
+            done
+          fi
+        fi
