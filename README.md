@@ -3,6 +3,7 @@
 This GitHub Actions workflow is designed to delete Docker images from GHCR.IO based on specified tags, wildcard patterns, or untagged images. It can be called from other workflows to automate the cleanup of Docker images in your repository.
 
 ## Inputs
+- `token` (required): GitHub Secret Token (with valid access to the packages).
 - `image` (required): The Docker image name (e.g., owner/repo/image).
 - `tags` (optional): A comma-separated list of image tags to delete (e.g., tag1,tag2,tag3).
 - `wildcard-tag` (optional): A wildcard pattern to match tags that start with the specified string (e.g., pr-*).
