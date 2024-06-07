@@ -31,7 +31,7 @@ jobs:
 ### Steps in the Workflow
 1. **Install jq:** Installs the jq utility for processing JSON data.
 2. **Get Package Versions:** Fetches all versions of the specified Docker image from GHCR.IO and stores them in a versions.json file.
-3. **Delete Docker Images:** Deletes the specified tags. Optionally deletes all untagged images if `remove-all-untagged-images` is set to true. Optionally deletes images matching the wildcard pattern specified in `wildcard-tag`.
+3. **Delete Docker Images:** Deletes the all images specified in `tags`.  Deletes all untagged images if `remove-all-untagged-images` is set to true. Deletes images matching the wildcard pattern specified in `wildcard-tag`.
 
 ### Environment Variables
 - `GITHUB_TOKEN`: The GitHub token required to authenticate API requests to GHCR.IO. Ensure this token has the necessary permissions to delete packages.
