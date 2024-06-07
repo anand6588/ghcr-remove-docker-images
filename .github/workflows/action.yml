@@ -20,6 +20,10 @@ on:
         required: false
         type: boolean
         default: false
+    secrets:
+      GITHUB_TOKEN:
+        description: 'GitHub Token with necessary permissions to delete package versions'
+        required: true 
 
 jobs:
   delete-tags:
