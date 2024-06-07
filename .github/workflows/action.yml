@@ -21,7 +21,7 @@ on:
         type: boolean
         default: false
     secrets:
-      GITHUB_TOKEN:
+      GH_TOKEN:
         description: 'GitHub Token with necessary permissions to delete package versions'
         required: true 
 
@@ -37,7 +37,7 @@ jobs:
       id: package_versions
       env:
         IMAGE: ${{ inputs.image }}
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
       run: |
         OWNER_REPO="${{ github.repository }}"
         OWNER=$(echo $OWNER_REPO | cut -d'/' -f1)
@@ -73,7 +73,7 @@ jobs:
     - name: Delete Docker Images
       env:
         TAGS: ${{ inputs.tags }}
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         REMOVE_UNTAGGED: ${{ inputs.remove-all-untagged-images }}
         WILDCARD_TAG: ${{ inputs.wildcard-tag }}
       run: |
