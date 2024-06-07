@@ -24,7 +24,7 @@ jobs:
       wildcard-tag: 'pr-*'
       remove-all-untagged-images: true
     secrets:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 ## Details
@@ -41,7 +41,7 @@ jobs:
 - `delete_version`: Deletes a specific version of the Docker image by its ID.
 
 ## Troubleshooting
-- Ensure that the `GITHUB_TOKEN` secret has the necessary permissions to delete Docker images.
+- Ensure that the `GH_TOKEN` secret has the necessary permissions to delete Docker images.
 - Check the workflow logs for any error messages returned by the GitHub API.
 - Verify the correctness of the image name, tags, and wildcard patterns provided as inputs.
 
