@@ -9,7 +9,7 @@ on:
         type: string
       tags:
         description: 'Comma-separated list of image tags to delete (e.g., tag1,tag2,tag3)'
-        required: true
+        required: false
         type: string
       wildcard-tag:
         description: 'Wildcard tag starts with (eg: pr-* )'
@@ -76,8 +76,6 @@ jobs:
         OWNER_REPO="${{ github.repository }}"
         OWNER=$(echo $OWNER_REPO | cut -d'/' -f1)
         IMAGE_NAME=$(basename "${{ inputs.image }}")
-
-        IFS=',' read -ra TAG_ARRAY <<< "$TAGS"
         
         # Function to delete a version by ID
         delete_version() {
@@ -103,6 +101,7 @@ jobs:
         }
 
         if [ -n "$TAGS" ]; then
+          IFS=',' read -ra TAG_ARRAY <<< "$TAGS"
           # Delete specified tags
           for tag in "${TAG_ARRAY[@]}"; do
             echo "Attempting to delete tag: $tag"
