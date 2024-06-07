@@ -138,7 +138,7 @@ jobs:
         if [ -n "$WILDCARD_TAG" ]; then
           # Delete Wildcard images
           echo "Attempting to delete Wildcard images"
-          wildcard_version_ids=$(jq -r --arg wildcardtag "${WILDCARD_TAG/\*/}" '.[] | select(.metadata.container.tags | type == "array" and any(.[]; test("^$wildcardtag.*"))) | .id' versions.json | tr '\n' ' ')
+          wildcard_version_ids=$(jq -r --arg wildcardtag "${WILDCARD_TAG/\*/}" '.[] | select(.metadata.container.tags | type == "array" and any(.[]; test("^" + $wildcardtag + ".*"))) | .id' versions.json | tr '\n' ' ')
 
           if [ -z "$wildcard_version_ids" ]; then
             echo "No wildcard versions found for $WILDCARD_TAG."
