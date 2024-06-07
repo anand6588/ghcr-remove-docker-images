@@ -3,10 +3,6 @@ name: Delete Docker Images from GHCR.IO
 on:
   workflow_call:
     inputs:
-      token: 
-        description: 'GitHub Secret Token (with valid access to the packages)'
-        required: true
-        type: string
       image:
         description: 'Docker image name (e.g., owner/repo/image)'
         required: true
@@ -37,7 +33,7 @@ jobs:
       id: package_versions
       env:
         IMAGE: ${{ inputs.image }}
-        GITHUB_TOKEN: ${{ inputs.token }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         OWNER_REPO="${{ github.repository }}"
         OWNER=$(echo $OWNER_REPO | cut -d'/' -f1)
@@ -73,7 +69,7 @@ jobs:
     - name: Delete Docker Images
       env:
         TAGS: ${{ inputs.tags }}
-        GITHUB_TOKEN: ${{ inputs.token }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         REMOVE_UNTAGGED: ${{ inputs.remove-all-untagged-images }}
         WILDCARD_TAG: ${{ inputs.wildcard-tag }}
       run: |
